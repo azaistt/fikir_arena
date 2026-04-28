@@ -18,7 +18,7 @@ export default function JoinPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), idea: idea.trim() }),
+        body: JSON.stringify({ name: name.trim(), text: idea.trim() }),
       })
       if (!res.ok) throw new Error('Sunucu hatası')
       setStatus('success')
