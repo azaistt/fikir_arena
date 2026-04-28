@@ -1,0 +1,25 @@
+{
+  "name": "fikir_arena",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "framer-motion": "^12.23.24",
+    "next": "^16.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.13",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.0.0",
+    "tailwindcss": "^4.1.13"
+  }
+}
