@@ -1,8 +1,47 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 
+const API = 'https://fikirarena-production.up.railway.app'
+
 export default function JoinSection() {
+  const [name, setName] = useState('')
+  const [text, setText] = useState('')
+  const [status, setStatus] = useState({ type: '', message: '' })
+  const [isSending, setIsSending] = useState(false)
+
+  const canSend = name.trim() && text.trim() && !isSending
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (!canSend) return
+
+    setIsSending(true)
+    setStatus({ type: '', message: '' })
+
+    try {
+      const res = await fetch(`${API}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: name.trim(), text: text.trim() }),
+      })
+      const data = await res.json()
+
+      if (!res.ok || data.status === 'rejected') {
+        setStatus({ type: 'error', message: 'Fikrin uygun bulunmadı, tekrar dene.' })
+        return
+      }
+
+      setText('')
+      setStatus({ type: 'success', message: 'Fikrin alındı! Yayında görünebilirsin.' })
+    } catch {
+      setStatus({ type: 'error', message: 'Bağlantı hatası, lütfen tekrar dene.' })
+    } finally {
+      setIsSending(false)
+    }
+  }
+
   return (
     <section id="join" className="broadcast-frame panel-surface panel-glow border-l-[2px] border-l-[#ff1e1e] px-5 py-8 sm:px-8 sm:py-10">
       <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
@@ -16,18 +55,37 @@ export default function JoinSection() {
             YouTube canlı sohbet ise yayına anlık ikinci bir akış kazandırır.
           </p>
 
-          <form className="mt-8 flex flex-col gap-4 sm:flex-row" onSubmit={(event) => event.preventDefault()}>
+          <form className="mt-8 flex flex-col gap-3" onSubmit={handleSubmit}>
             <input
               type="text"
-              placeholder="Fikrini buraya yaz..."
-              className="broadcast-card min-h-14 flex-1 border border-[rgba(255,30,30,0.18)] bg-[rgba(255,255,255,0.03)] px-6 text-white outline-none transition placeholder:text-[#9a9a9a] focus:border-[#ff1e1e] focus:bg-[rgba(255,30,30,0.06)]"
+              placeholder="Adın veya takma adın..."
+              maxLength={40}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="broadcast-card min-h-14 border border-[rgba(255,30,30,0.18)] bg-[rgba(255,255,255,0.03)] px-6 text-white outline-none transition placeholder:text-[#9a9a9a] focus:border-[#ff1e1e] focus:bg-[rgba(255,30,30,0.06)]"
             />
-            <button
-              type="submit"
-              className="broadcast-chip min-h-14 bg-[linear-gradient(135deg,#ff1e1e,#b80e0e)] px-7 font-[var(--font-sora)] text-base font-semibold uppercase tracking-[0.18em] text-white transition hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(255,30,30,0.42)]"
-            >
-              Gönder
-            </button>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Fikrini buraya yaz..."
+                maxLength={240}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="broadcast-card min-h-14 flex-1 border border-[rgba(255,30,30,0.18)] bg-[rgba(255,255,255,0.03)] px-6 text-white outline-none transition placeholder:text-[#9a9a9a] focus:border-[#ff1e1e] focus:bg-[rgba(255,30,30,0.06)]"
+              />
+              <button
+                type="submit"
+                disabled={!canSend}
+                className="broadcast-chip min-h-14 bg-[linear-gradient(135deg,#ff1e1e,#b80e0e)] px-7 font-[var(--font-sora)] text-base font-semibold uppercase tracking-[0.18em] text-white transition hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(255,30,30,0.42)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSending ? '...' : 'Gönder'}
+              </button>
+            </div>
+            {status.message && (
+              <p className={`text-sm ${status.type === 'success' ? 'text-[#5DD9C1]' : 'text-[#ff6b6b]'}`}>
+                {status.message}
+              </p>
+            )}
           </form>
         </div>
 
