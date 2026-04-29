@@ -28,7 +28,7 @@ export default function HeroSection() {
 
         <p className="mt-6 max-w-xl text-lg leading-8 text-[#e6e6e6] sm:text-xl">
           İzleyici artık sadece izleyen değil, karar veren. Fikir Arena&apos;da katılım hem
-          TV ekranındaki QR kod üzerinden hem de YouTube canlı sohbet akışı üzerinden aynı anda büyür.
+          TV ekranındaki QR kod üzerinden, hem YouTube canlı sohbet akışı hem de web sitesi üzerinden aynı anda büyür.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
