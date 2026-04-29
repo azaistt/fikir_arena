@@ -858,7 +858,7 @@ async def generate_display_texts(text: str) -> dict:
             system=(
                 "Sen bir canlı yayın asistanısın. "
                 "Verilen Türkçe izleyici mesajı için iki versiyon üret ve SADECE JSON döndür, başka hiçbir şey ekleme:\n"
-                "1. display_text: Overlay ekranı için 80-100 karakter arası özet. Ana fikri koru, etkileyici yaz.\n"
+                "1. display_text: Overlay ekranı için maksimum 80 karakter özet. Tek satırda sığacak şekilde yaz, kesinlikle 80 karakteri geçme. Ana fikri koru, etkileyici yaz.\n"
                 "2. presenter_text: Yazım ve noktalama hatalarını düzelt, metnin tamamını koru.\n"
                 'Format: {"display_text": "...", "presenter_text": "..."}'
             ),
@@ -868,7 +868,7 @@ async def generate_display_texts(text: str) -> dict:
         match = re.search(r'\{[^{}]*"display_text"[^{}]*\}', raw, re.DOTALL)
         data = json.loads(match.group() if match else raw.strip())
         return {
-            "display_text": str(data.get("display_text") or short_fallback)[:120],
+            "display_text": str(data.get("display_text") or short_fallback)[:80],
             "presenter_text": str(data.get("presenter_text") or text)[:500],
         }
     except Exception:
