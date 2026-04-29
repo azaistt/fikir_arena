@@ -47,15 +47,15 @@ export default function LandingPage() {
         <HeroSection />
 
         <motion.div {...fadeIn}>
+          <JoinSection />
+        </motion.div>
+
+        <motion.div {...fadeIn}>
           <FlowSection />
         </motion.div>
 
         <motion.div {...fadeIn}>
           <LiveExperienceSection />
-        </motion.div>
-
-        <motion.div {...fadeIn}>
-          <JoinSection />
         </motion.div>
       </main>
 
