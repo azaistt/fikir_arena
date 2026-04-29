@@ -42,10 +42,10 @@ export default function JoinPage() {
           <Image
             src="/media/fikir-arena-logo-full.png"
             alt="Fikir Arena"
-            width={180}
-            height={48}
+            width={260}
+            height={70}
             priority
-            className="h-10 w-auto object-contain"
+            className="h-16 w-auto object-contain"
           />
         </div>
 
@@ -72,7 +72,7 @@ export default function JoinPage() {
                   Fikrini Gönder
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-[#9a9a9a]">
-                  En iyi fikir yayında okunur ve oylanır.
+                  En iyi fikir ekrana çıkar — seçilen fikir canlı yayında oylanır!
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
