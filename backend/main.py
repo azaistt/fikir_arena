@@ -69,6 +69,8 @@ poll_state = {
 next_id = 1
 seen_hashes: set[str] = set()
 last_submit_by_user: dict[str, float] = {}
+approved_history: list[dict] = []
+seen_users: set[str] = set()
 
 # Legacy (kept only for migration trace; not used in runtime policy).
 LEGACY_BLACKLIST_PATTERNS = [
@@ -132,7 +134,7 @@ youtube_task: asyncio.Task | None = None
 
 def normalize_text(value: str) -> str:
     text = str(value or "").strip().lower()
-    text = text.replace("\u0131", "i")
+    text = text.replace("ı", "i")
     decomposed = unicodedata.normalize("NFKD", text)
     without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     return " ".join(without_marks.split())
@@ -456,6 +458,7 @@ async def ingest_youtube_message(item: dict) -> None:
         "external_id": message_id,
     }
     next_id += 1
+    seen_users.add(normalize_text(user))
     enqueue_pending_item(queue_item)
 
 
@@ -824,6 +827,7 @@ def submit_message(data: dict):
         "created_at": time.time(),
     }
     next_id += 1
+    seen_users.add(normalize_text(user))
     enqueue_pending_item(item)
 
     return {"status": "queued", "item": item}
@@ -839,6 +843,38 @@ def get_queue():
     }
 
 
+async def generate_display_texts(text: str) -> dict:
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    short_fallback = (text[:97] + "...") if len(text) > 100 else text
+    if not api_key:
+        return {"display_text": short_fallback, "presenter_text": text}
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = await asyncio.to_thread(
+            client.messages.create,
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system=(
+                "Sen bir canlı yayın asistanısın. "
+                "Verilen Türkçe izleyici mesajı için iki versiyon üret ve SADECE JSON döndür, başka hiçbir şey ekleme:\n"
+                "1. display_text: Overlay ekranı için 80-100 karakter arası özet. Ana fikri koru, etkileyici yaz.\n"
+                "2. presenter_text: Yazım ve noktalama hatalarını düzelt, metnin tamamını koru.\n"
+                'Format: {"display_text": "...", "presenter_text": "..."}'
+            ),
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = next((b.text for b in response.content if b.type == "text"), "")
+        match = re.search(r'\{[^{}]*"display_text"[^{}]*\}', raw, re.DOTALL)
+        data = json.loads(match.group() if match else raw.strip())
+        return {
+            "display_text": str(data.get("display_text") or short_fallback)[:120],
+            "presenter_text": str(data.get("presenter_text") or text)[:500],
+        }
+    except Exception:
+        return {"display_text": short_fallback, "presenter_text": text}
+
+
 @app.post("/approve")
 async def approve_message(data: dict):
     item_id = data.get("id")
@@ -851,7 +887,15 @@ async def approve_message(data: dict):
                 approved_item["original_text"] = approved_item["text"]
                 approved_item["text"] = override_text[:240]
             approved_item["status"] = "approved"
+
+            ai_texts = await generate_display_texts(approved_item["text"])
+            approved_item["display_text"] = ai_texts["display_text"]
+            approved_item["presenter_text"] = ai_texts["presenter_text"]
+
             state["active"] = approved_item
+            approved_history.append(approved_item)
+            if len(approved_history) > 4:
+                approved_history.pop(0)
 
             await broadcast_event(
                 {
@@ -913,3 +957,12 @@ async def ai_clean_message(data: dict):
         raise HTTPException(status_code=401, detail="Geçersiz Anthropic API key.")
     except anthropic.APIStatusError as exc:
         raise HTTPException(status_code=502, detail=f"AI API hatası: {exc.message[:200]}")
+
+
+@app.get("/overlay/data")
+def get_overlay_data():
+    return {
+        "messages": approved_history[-4:],
+        "total_ideas": next_id - 1,
+        "participant_count": len(seen_users),
+    }
