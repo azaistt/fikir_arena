@@ -6,14 +6,15 @@ import { flowSteps } from '../lib/site-content'
 export default function FlowSection() {
   return (
     <section id="flow" className="broadcast-frame panel-surface panel-glow border-l-[2px] border-l-[#ff1e1e] px-5 py-8 sm:px-8 sm:py-10">
-      <div className="max-w-3xl">
+      <div className="w-full max-w-3xl">
         <p className="label-ui text-[0.74rem] text-[#e6e6e6]">How It Works</p>
-        <h2 className="display-heading mt-4 text-[3rem] leading-[0.9] tracking-[0.06em] text-[#e6e6e6] sm:text-[4.5rem]">
+        <h2 className="display-heading mt-4 text-[2rem] leading-[0.92] tracking-[0.06em] text-[#e6e6e6] sm:text-[3rem] lg:text-[4.5rem]">
           İzleyici → Etkileşim → Sistem → Yayın
         </h2>
         <p className="mt-4 max-w-2xl text-base leading-7 text-[#e6e6e6] sm:text-lg">
-          TV + YouTube + Web formatın en güçlü omurgasıdır: izleyici TV üzerindeki QR kodla ya da
-          YouTube sohbetten yayına girer, sistem toplar ve filtreler, yayın seçer, anket kararı büyütür.
+          TV + YouTube + Web formatın en güçlü omurgasıdır: izleyici TV üzerindeki QR kodla,
+          YouTube sohbetten ya da web sitesi üzerinden yayına girer, sistem toplar ve filtreler,
+          yayın seçer, anket kararı büyütür.
         </p>
       </div>
 
