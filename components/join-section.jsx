@@ -51,8 +51,8 @@ export default function JoinSection() {
             Fikrini Gönder. Yayında Yerini Al.
           </h2>
           <p className="mt-4 max-w-xl text-base leading-7 text-[#e6e6e6] sm:text-lg">
-            Katılım iki kanaldan akar: TV ekranındaki QR kod hızlı mobil giriş üretir,
-            YouTube canlı sohbet ise yayına anlık ikinci bir akış kazandırır.
+            Katılım üç kanaldan akar: TV ekranındaki QR kod, YouTube canlı sohbet
+            ve web sitesi — hepsi aynı anda yayına taşınır.
           </p>
 
           <form className="mt-8 flex flex-col gap-3" onSubmit={handleSubmit}>
