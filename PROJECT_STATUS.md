@@ -148,6 +148,24 @@ her 3s poll
 
 ---
 
+## Yarınki Görev (2026-04-30) — Admin Panel UI Yeniden Tasarımı
+
+**Mevcut sorun:** Sayfa çok uzun, operatör yayın sırasında hızlı aksiyon alamıyor.  
+**Kural:** İşlevler bozulmayacak — sadece layout kompaktlaştırılacak.
+
+### Hedef Layout
+- Üst şerit: canlı stats (pending / on-air / overflow) + hızlı kontroller tek satırda
+- Ana alan: mesaj kuyruğu solda (büyük, kaydırılabilir) / sağ sidebar sabit (YouTube bağlantısı + overlay kontrolü + aktif mesaj)
+- Her mesaj kartı daha kompakt — onay/red tek tıkla, AI butonu ikincil
+- Sağ sidebar ekrandan taşmayacak şekilde sabit yükseklik + iç scroll
+
+### Yapılmayacaklar
+- Mevcut state/API çağrıları değiştirilmeyecek
+- `autoAiClean`, AI öneri paneli, YouTube form işlevleri korunacak
+- Renk/tipografi sistemi korunacak (Admin.css'teki değişkenler)
+
+---
+
 ## Eksik / Yapılacaklar
 
 ### Kritik (Canlı Yayın Öncesi)
