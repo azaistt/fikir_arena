@@ -134,7 +134,7 @@ youtube_task: asyncio.Task | None = None
 
 def normalize_text(value: str) -> str:
     text = str(value or "").strip().lower()
-    text = text.replace("ı", "i")
+    text = text.replace("\u0131", "i")
     decomposed = unicodedata.normalize("NFKD", text)
     without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     return " ".join(without_marks.split())
@@ -843,9 +843,17 @@ def get_queue():
     }
 
 
+def _truncate_at_word(text: str, max_chars: int = 80) -> str:
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars]
+    last_space = cut.rfind(" ")
+    return cut[:last_space] if last_space > 0 else cut
+
+
 async def generate_display_texts(text: str) -> dict:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    short_fallback = (text[:97] + "...") if len(text) > 100 else text
+    short_fallback = _truncate_at_word(text)
     if not api_key:
         return {"display_text": short_fallback, "presenter_text": text}
 
@@ -868,7 +876,7 @@ async def generate_display_texts(text: str) -> dict:
         match = re.search(r'\{[^{}]*"display_text"[^{}]*\}', raw, re.DOTALL)
         data = json.loads(match.group() if match else raw.strip())
         return {
-            "display_text": str(data.get("display_text") or short_fallback)[:80],
+            "display_text": _truncate_at_word(str(data.get("display_text") or short_fallback)),
             "presenter_text": str(data.get("presenter_text") or text)[:500],
         }
     except Exception:
