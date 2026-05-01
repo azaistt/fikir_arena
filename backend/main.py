@@ -974,3 +974,75 @@ def get_overlay_data():
         "total_ideas": next_id - 1,
         "participant_count": len(seen_users),
     }
+
+
+@app.post("/ai/select-top3")
+async def ai_select_top3():
+    candidates = list(approved_history)
+
+    if not candidates:
+        return {"top3": []}
+
+    def _build_result(item: dict, reason: str) -> dict:
+        return {
+            "id": item["id"],
+            "text": item.get("display_text") or item["text"],
+            "name": item.get("user", ""),
+            "source": item.get("source", "QR"),
+            "reason": reason,
+        }
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+
+    if not api_key:
+        return {"top3": [_build_result(c, "Seçildi") for c in candidates[-3:]]}
+
+    ideas_text = "\n".join(
+        f'{i + 1}. [ID:{c["id"]}] {c.get("display_text") or c["text"]}'
+        for i, c in enumerate(candidates)
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = await asyncio.to_thread(
+            client.messages.create,
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            system=(
+                "Sen bir canlı yayın yapımcısısın. "
+                "Verilen fikir listesinden en iyi 3'ünü seç. "
+                "Seçim kriterleri: özgünlük, uygulanabilirlik, yayın değeri. "
+                "Her seçilen fikir için 1-2 kelimelik Türkçe gerekçe yaz "
+                "(örnek: 'Yenilikçi', 'Uygulanabilir', 'Yaratıcı', 'Etkileyici', 'Özgün'). "
+                "SADECE JSON döndür, başka hiçbir şey ekleme:\n"
+                '{"top3": [{"id": <sayı>, "reason": "<1-2 kelime>"}, ...]}'
+            ),
+            messages=[{"role": "user", "content": ideas_text}],
+        )
+        raw = next((b.text for b in response.content if b.type == "text"), "")
+
+        try:
+            data = json.loads(raw.strip())
+        except json.JSONDecodeError:
+            match = re.search(r'\{.*?"top3".*?\].*?\}', raw, re.DOTALL)
+            data = json.loads(match.group()) if match else {"top3": []}
+
+        id_to_item = {c["id"]: c for c in candidates}
+        top3 = []
+        for entry in data.get("top3", [])[:3]:
+            item = id_to_item.get(entry.get("id"))
+            if item:
+                top3.append(_build_result(item, str(entry.get("reason", "Seçildi"))))
+
+        used_ids = {r["id"] for r in top3}
+        for c in reversed(candidates):
+            if len(top3) >= 3:
+                break
+            if c["id"] not in used_ids:
+                top3.append(_build_result(c, "Seçildi"))
+                used_ids.add(c["id"])
+
+        return {"top3": top3}
+
+    except Exception:
+        return {"top3": [_build_result(c, "Seçildi") for c in candidates[-3:]]}
