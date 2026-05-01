@@ -976,6 +976,9 @@ def get_overlay_data():
     }
 
 
+DEFAULT_SCORES = {"originality": 75, "feasibility": 75, "broadcast_value": 75}
+
+
 @app.post("/ai/select-top3")
 async def ai_select_top3():
     candidates = list(approved_history)
@@ -983,19 +986,26 @@ async def ai_select_top3():
     if not candidates:
         return {"top3": []}
 
-    def _build_result(item: dict, reason: str) -> dict:
+    def _build_result(item: dict, reason: str, scores: dict) -> dict:
         return {
             "id": item["id"],
             "text": item.get("display_text") or item["text"],
             "name": item.get("user", ""),
             "source": item.get("source", "QR"),
             "reason": reason,
+            "scores": {
+                "originality": int(scores.get("originality", 75)),
+                "feasibility": int(scores.get("feasibility", 75)),
+                "broadcast_value": int(scores.get("broadcast_value", 75)),
+            },
         }
 
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
     if not api_key:
-        return {"top3": [_build_result(c, "Seçildi") for c in candidates[-3:]]}
+        return {
+            "top3": [_build_result(c, "Seçildi", DEFAULT_SCORES) for c in candidates[-3:]]
+        }
 
     ideas_text = "\n".join(
         f'{i + 1}. [ID:{c["id"]}] {c.get("display_text") or c["text"]}'
@@ -1007,15 +1017,18 @@ async def ai_select_top3():
         response = await asyncio.to_thread(
             client.messages.create,
             model="claude-haiku-4-5-20251001",
-            max_tokens=400,
+            max_tokens=600,
             system=(
                 "Sen bir canlı yayın yapımcısısın. "
                 "Verilen fikir listesinden en iyi 3'ünü seç. "
-                "Seçim kriterleri: özgünlük, uygulanabilirlik, yayın değeri. "
-                "Her seçilen fikir için 1-2 kelimelik Türkçe gerekçe yaz "
-                "(örnek: 'Yenilikçi', 'Uygulanabilir', 'Yaratıcı', 'Etkileyici', 'Özgün'). "
+                "Her seçilen fikir için şunları üret:\n"
+                "- reason: 1-2 kelimelik Türkçe gerekçe (örn: 'Yenilikçi', 'Uygulanabilir', 'Yaratıcı')\n"
+                "- originality: özgünlük puanı (1-100)\n"
+                "- feasibility: uygulanabilirlik puanı (1-100)\n"
+                "- broadcast_value: yayın değeri puanı (1-100)\n"
                 "SADECE JSON döndür, başka hiçbir şey ekleme:\n"
-                '{"top3": [{"id": <sayı>, "reason": "<1-2 kelime>"}, ...]}'
+                '{"top3": [{"id": <sayı>, "reason": "<1-2 kelime>", '
+                '"originality": <1-100>, "feasibility": <1-100>, "broadcast_value": <1-100>}, ...]}'
             ),
             messages=[{"role": "user", "content": ideas_text}],
         )
@@ -1032,17 +1045,24 @@ async def ai_select_top3():
         for entry in data.get("top3", [])[:3]:
             item = id_to_item.get(entry.get("id"))
             if item:
-                top3.append(_build_result(item, str(entry.get("reason", "Seçildi"))))
+                scores = {
+                    "originality": entry.get("originality", 75),
+                    "feasibility": entry.get("feasibility", 75),
+                    "broadcast_value": entry.get("broadcast_value", 75),
+                }
+                top3.append(_build_result(item, str(entry.get("reason", "Seçildi")), scores))
 
         used_ids = {r["id"] for r in top3}
         for c in reversed(candidates):
             if len(top3) >= 3:
                 break
             if c["id"] not in used_ids:
-                top3.append(_build_result(c, "Seçildi"))
+                top3.append(_build_result(c, "Seçildi", DEFAULT_SCORES))
                 used_ids.add(c["id"])
 
         return {"top3": top3}
 
     except Exception:
-        return {"top3": [_build_result(c, "Seçildi") for c in candidates[-3:]]}
+        return {
+            "top3": [_build_result(c, "Seçildi", DEFAULT_SCORES) for c in candidates[-3:]]
+        }
