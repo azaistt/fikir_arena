@@ -126,7 +126,7 @@ function DecisionPanel({ decision }) {
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
-                    {idea.text}
+                    {idea.presenter_text || idea.text}
                   </p>
                   {(idea.reason || idea.name) && (
                     <div style={{ marginTop: 4, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

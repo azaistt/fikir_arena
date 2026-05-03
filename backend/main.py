@@ -1013,6 +1013,7 @@ async def ai_select_top3():
         return {
             "id": item["id"],
             "text": item.get("display_text") or item["text"],
+            "presenter_text": item.get("presenter_text") or item.get("text") or "",
             "name": item.get("user", ""),
             "source": item.get("source", "QR"),
             "reason": reason,
