@@ -12,7 +12,7 @@ from urllib.request import urlopen
 
 import anthropic
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
@@ -988,10 +988,7 @@ DEFAULT_SCORES = {"originality": 75, "feasibility": 75, "broadcast_value": 75}
 
 
 @app.post("/decision-sync")
-async def post_decision_sync(data: dict, request: Request):
-    secret = request.headers.get("X-Sync-Secret", "")
-    if DECISION_SYNC_SECRET and secret != DECISION_SYNC_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+async def post_decision_sync(data: dict):
     if "state" in data and data["state"] in ("top3", "poll", "result"):
         decision_sync_state["state"] = data["state"]
     if "top3Ideas" in data and isinstance(data["top3Ideas"], list):
