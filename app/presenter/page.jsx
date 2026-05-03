@@ -64,6 +64,20 @@ function useDecisionState() {
   return decision
 }
 
+function buildAiComment(idea) {
+  const { reason, scores } = idea
+  if (!scores) return null
+  const { originality, feasibility, broadcast_value } = scores
+  const avg = Math.round((originality + feasibility + broadcast_value) / 3)
+  const strengthWord = avg >= 80 ? 'güçlü' : avg >= 65 ? 'dengeli' : 'gelişime açık'
+  const parts = []
+  if (reason) parts.push(`Yapay zeka bu fikri "${reason}" olarak öne çıkardı.`)
+  parts.push(
+    `Özgünlük %${originality}, uygulanabilirlik %${feasibility}, yayın değeri %${broadcast_value} — genel olarak ${strengthWord} bir profil.`
+  )
+  return parts.join(' ')
+}
+
 function DecisionPanel({ decision }) {
   const { state, top3Ideas, updated_at } = decision
   const color = STATE_COLORS[state] || '#888'
@@ -103,30 +117,38 @@ function DecisionPanel({ decision }) {
         <p style={{ margin: 0, color: '#444', fontSize: '0.9rem' }}>Henüz fikir seçilmedi.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {top3Ideas.map((idea, i) => (
-            <div key={idea.id ?? i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <span style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: color + '22', border: `1px solid ${color}66`, borderRadius: 6, fontFamily: 'var(--font-rajdhani)', fontSize: '1rem', fontWeight: 700, color, lineHeight: 1 }}>
-                {i + 1}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
-                  {idea.text}
-                </p>
-                {(idea.reason || idea.name) && (
-                  <div style={{ marginTop: 4, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {idea.reason && (
-                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', background: color + '18', border: `1px solid ${color}44`, borderRadius: 4, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        {idea.reason}
-                      </span>
-                    )}
-                    {idea.name && (
-                      <span style={{ fontSize: '0.72rem', color: '#666' }}>{idea.name}</span>
-                    )}
-                  </div>
-                )}
+          {top3Ideas.map((idea, i) => {
+            const aiComment = buildAiComment(idea)
+            return (
+              <div key={idea.id ?? i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <span style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: color + '22', border: `1px solid ${color}66`, borderRadius: 6, fontFamily: 'var(--font-rajdhani)', fontSize: '1rem', fontWeight: 700, color, lineHeight: 1 }}>
+                  {i + 1}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+                    {idea.text}
+                  </p>
+                  {(idea.reason || idea.name) && (
+                    <div style={{ marginTop: 4, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {idea.reason && (
+                        <span style={{ fontSize: '0.72rem', padding: '2px 8px', background: color + '18', border: `1px solid ${color}44`, borderRadius: 4, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                          {idea.reason}
+                        </span>
+                      )}
+                      {idea.name && (
+                        <span style={{ fontSize: '0.72rem', color: '#666' }}>{idea.name}</span>
+                      )}
+                    </div>
+                  )}
+                  {aiComment && (
+                    <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#888', lineHeight: 1.5, fontFamily: 'var(--font-sora)', fontStyle: 'italic', borderLeft: `2px solid ${color}33`, paddingLeft: '0.6rem' }}>
+                      {aiComment}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </section>
