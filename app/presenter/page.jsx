@@ -4,6 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 
 const API = 'https://fikirarena-production.up.railway.app'
 const POLL_MS = 5000
+const DECISION_POLL_MS = 3000
+
+const STATE_LABELS = {
+  top3: 'İLK 3 BELLİ OLDU',
+  poll: 'İZLEYİCİ OYLAMASI',
+  result: 'FİNAL SONUCU',
+}
+
+const STATE_COLORS = {
+  top3: '#1a6fff',
+  poll: '#ff9900',
+  result: '#ff1e1e',
+}
 
 function useLiveData() {
   const [messages, setMessages] = useState([])
@@ -33,6 +46,91 @@ function useLiveData() {
   }, [])
 
   return { messages, totalIdeas, participantCount, lastUpdated }
+}
+
+function useDecisionState() {
+  const [decision, setDecision] = useState({ state: 'top3', top3Ideas: [], updated_at: null })
+  useEffect(() => {
+    const fetch_ = async () => {
+      try {
+        const res = await fetch(`${API}/decision-state`)
+        if (res.ok) setDecision(await res.json())
+      } catch {}
+    }
+    fetch_()
+    const t = setInterval(fetch_, DECISION_POLL_MS)
+    return () => clearInterval(t)
+  }, [])
+  return decision
+}
+
+function DecisionPanel({ decision }) {
+  const { state, top3Ideas, updated_at } = decision
+  const color = STATE_COLORS[state] || '#888'
+  const label = STATE_LABELS[state] || state
+  const timeStr = updated_at
+    ? new Date(updated_at * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '—'
+
+  return (
+    <section
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${color}44`,
+        borderLeft: `4px solid ${color}`,
+        borderRadius: '0 12px 12px 0',
+        padding: '1.5rem 2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+      }}
+    >
+      {/* Başlık satırı */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
+          <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color }} >
+            {label}
+          </span>
+        </div>
+        <span style={{ fontSize: '0.72rem', color: '#555', letterSpacing: '0.08em' }}>
+          KARAR EKRANI · {timeStr}
+        </span>
+      </div>
+
+      {/* Fikir listesi */}
+      {top3Ideas.length === 0 ? (
+        <p style={{ margin: 0, color: '#444', fontSize: '0.9rem' }}>Henüz fikir seçilmedi.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          {top3Ideas.map((idea, i) => (
+            <div key={idea.id ?? i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <span style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: color + '22', border: `1px solid ${color}66`, borderRadius: 6, fontFamily: 'var(--font-rajdhani)', fontSize: '1rem', fontWeight: 700, color, lineHeight: 1 }}>
+                {i + 1}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+                  {idea.text}
+                </p>
+                {(idea.reason || idea.name) && (
+                  <div style={{ marginTop: 4, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {idea.reason && (
+                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', background: color + '18', border: `1px solid ${color}44`, borderRadius: 4, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {idea.reason}
+                      </span>
+                    )}
+                    {idea.name && (
+                      <span style={{ fontSize: '0.72rem', color: '#666' }}>{idea.name}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
 }
 
 function SourceBadge({ source }) {
@@ -132,6 +230,7 @@ function MessageCard({ item, index }) {
 
 export default function PresenterPage() {
   const { messages, totalIdeas, participantCount, lastUpdated } = useLiveData()
+  const decision = useDecisionState()
 
   const timeStr = lastUpdated
     ? lastUpdated.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -228,6 +327,9 @@ export default function PresenterPage() {
           </div>
         </div>
       </header>
+
+      {/* Karar ekranı durumu */}
+      <DecisionPanel decision={decision} />
 
       {/* Mesaj listesi */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

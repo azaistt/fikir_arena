@@ -12,7 +12,7 @@ from urllib.request import urlopen
 
 import anthropic
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,6 +71,14 @@ seen_hashes: set[str] = set()
 last_submit_by_user: dict[str, float] = {}
 approved_history: list[dict] = []
 seen_users: set[str] = set()
+
+DECISION_SYNC_SECRET = os.getenv("DECISION_SYNC_SECRET", "").strip()
+
+decision_sync_state: dict = {
+    "state": "top3",
+    "top3Ideas": [],
+    "updated_at": None,
+}
 
 # Legacy (kept only for migration trace; not used in runtime policy).
 LEGACY_BLACKLIST_PATTERNS = [
@@ -977,6 +985,24 @@ def get_overlay_data():
 
 
 DEFAULT_SCORES = {"originality": 75, "feasibility": 75, "broadcast_value": 75}
+
+
+@app.post("/decision-sync")
+async def post_decision_sync(data: dict, request: Request):
+    secret = request.headers.get("X-Sync-Secret", "")
+    if DECISION_SYNC_SECRET and secret != DECISION_SYNC_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if "state" in data and data["state"] in ("top3", "poll", "result"):
+        decision_sync_state["state"] = data["state"]
+    if "top3Ideas" in data and isinstance(data["top3Ideas"], list):
+        decision_sync_state["top3Ideas"] = data["top3Ideas"]
+    decision_sync_state["updated_at"] = time.time()
+    return {"ok": True}
+
+
+@app.get("/decision-state")
+def get_decision_state():
+    return decision_sync_state
 
 
 @app.post("/ai/select-top3")
