@@ -75,6 +75,7 @@ function usePollCountdown() {
   const [serverSeconds, setServerSeconds] = useState(0)
   const [pollActive, setPollActive] = useState(false)
   const [remaining, setRemaining] = useState(0)
+  const [pollIdeas, setPollIdeas] = useState([])
 
   useEffect(() => {
     const fetch_ = async () => {
@@ -87,6 +88,7 @@ function usePollCountdown() {
           setServerSeconds(data.remaining_seconds)
           setRemaining(data.remaining_seconds)
         }
+        if (Array.isArray(data.ideas)) setPollIdeas(data.ideas)
       } catch {}
     }
     fetch_()
@@ -104,7 +106,51 @@ function usePollCountdown() {
     return () => clearTimeout(t)
   }, [remaining])
 
-  return { remaining, pollActive }
+  return { remaining, pollActive, pollIdeas }
+}
+
+function getWinnerIndex(pollIdeas) {
+  if (!pollIdeas || pollIdeas.length === 0) return 0
+  let maxPercent = -1
+  let idx = 0
+  pollIdeas.forEach((idea, i) => {
+    if ((idea.percent || 0) > maxPercent) {
+      maxPercent = idea.percent || 0
+      idx = i
+    }
+  })
+  return idx
+}
+
+function buildModeratorScript(idea, winnerPercent) {
+  if (!idea || !idea.scores) return []
+  const { reason, scores, name, source } = idea
+  const { originality, feasibility, broadcast_value } = scores
+
+  const origLabel = originality >= 80 ? 'son derece özgün' : originality >= 65 ? 'farklı bir bakış açısı' : 'ilgi çekici'
+  const feasLabel = feasibility >= 80 ? 'hayata geçirilmesi oldukça mümkün' : feasibility >= 65 ? 'uygulanabilir bir potansiyel taşıyor' : 'geliştirmeye açık'
+  const bcLabel   = broadcast_value >= 80 ? 'geniş kitlelere hitap ediyor' : broadcast_value >= 65 ? 'yayın için güçlü bir içerik' : 'belirli bir kesime hitap ediyor'
+
+  const lines = []
+
+  if (name) {
+    const via = source === 'YouTube' ? 'YouTube üzerinden' : 'QR koduyla'
+    lines.push(`${name}, ${via} bu fikri gönderdi ve izleyicilerin favorisi oldu.`)
+  }
+
+  if (reason) {
+    lines.push(`Yapay zeka bu fikri "${reason}" olarak nitelendirdi — peki neden?`)
+  }
+
+  lines.push(`Özgünlük %${originality}: Bu fikir ${origLabel}. Rakiplerden nasıl ayrışıyor?`)
+  lines.push(`Uygulanabilirlik %${feasibility}: ${feasLabel}. Gerçekçi mi, haydi konuşalım.`)
+  lines.push(`Yayın değeri %${broadcast_value}: ${bcLabel}. İzleyici bu fikri neden benimsedi?`)
+
+  if (winnerPercent > 0) {
+    lines.push(`İzleyicilerin %${Math.round(winnerPercent)}'i bu fikri destekledi. Seyirci kitlesi ne görmek istedi?`)
+  }
+
+  return lines
 }
 
 function buildAiComment(idea) {
@@ -121,13 +167,56 @@ function buildAiComment(idea) {
   return parts.join(' ')
 }
 
-function DecisionPanel({ decision }) {
+function IdeaRow({ idea, index, color }) {
+  const aiComment = buildAiComment(idea)
+  return (
+    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+      <span style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: color + '22', border: `1px solid ${color}66`, borderRadius: 6, fontFamily: 'var(--font-rajdhani)', fontSize: '1rem', fontWeight: 700, color, lineHeight: 1 }}>
+        {index + 1}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+          {idea.presenter_text || idea.text}
+        </p>
+        {idea.text && idea.presenter_text && idea.text !== idea.presenter_text && (
+          <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#555', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+            <span style={{ color: '#444', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.65rem', marginRight: 6 }}>Overlay:</span>
+            {idea.text}
+          </p>
+        )}
+        {(idea.reason || idea.name) && (
+          <div style={{ marginTop: 6, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {idea.reason && (
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', background: color + '18', border: `1px solid ${color}44`, borderRadius: 4, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                {idea.reason}
+              </span>
+            )}
+            {idea.name && <span style={{ fontSize: '0.72rem', color: '#666' }}>{idea.name}</span>}
+          </div>
+        )}
+        {aiComment && (
+          <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#888', lineHeight: 1.5, fontFamily: 'var(--font-sora)', fontStyle: 'italic', borderLeft: `2px solid ${color}33`, paddingLeft: '0.6rem' }}>
+            {aiComment}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DecisionPanel({ decision, pollIdeas }) {
   const { state, top3Ideas, updated_at } = decision
   const color = STATE_COLORS[state] || '#888'
   const label = STATE_LABELS[state] || state
   const timeStr = updated_at
     ? new Date(updated_at * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : '—'
+
+  const isResult = state === 'result'
+  const winnerIdx = isResult ? getWinnerIndex(pollIdeas) : -1
+  const winnerIdea = isResult ? top3Ideas[winnerIdx] : null
+  const winnerPercent = isResult && pollIdeas[winnerIdx] ? (pollIdeas[winnerIdx].percent || 0) : 0
+  const moderatorLines = winnerIdea ? buildModeratorScript(winnerIdea, winnerPercent) : []
 
   return (
     <section
@@ -146,7 +235,7 @@ function DecisionPanel({ decision }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
-          <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color }} >
+          <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color }}>
             {label}
           </span>
         </div>
@@ -155,51 +244,51 @@ function DecisionPanel({ decision }) {
         </span>
       </div>
 
-      {/* Fikir listesi */}
       {top3Ideas.length === 0 ? (
         <p style={{ margin: 0, color: '#444', fontSize: '0.9rem' }}>Henüz fikir seçilmedi.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {top3Ideas.map((idea, i) => {
-            const aiComment = buildAiComment(idea)
-            return (
-              <div key={idea.id ?? i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <span style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: color + '22', border: `1px solid ${color}66`, borderRadius: 6, fontFamily: 'var(--font-rajdhani)', fontSize: '1rem', fontWeight: 700, color, lineHeight: 1 }}>
+      ) : isResult && winnerIdea ? (
+        /* RESULT: sadece kazanan + moderatör scripti */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Kazanan fikir */}
+          <div style={{ background: 'rgba(255,30,30,0.06)', border: '1px solid rgba(255,30,30,0.25)', borderLeft: '4px solid #ff1e1e', borderRadius: '0 8px 8px 0', padding: '1rem 1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#ff1e1e' }}>
+                🏆 KAZANAN FİKİR {winnerPercent > 0 ? `· %${Math.round(winnerPercent)} oy` : ''}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#f3f3f3', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+              {winnerIdea.presenter_text || winnerIdea.text}
+            </p>
+            {winnerIdea.name && (
+              <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#666', fontFamily: 'var(--font-sora)' }}>
+                {winnerIdea.name} · {winnerIdea.source}
+              </p>
+            )}
+          </div>
+
+          {/* Moderatör konuşma kartı */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#555' }}>
+              SUNUCU KONUŞMA NOKTALARI
+            </span>
+            {moderatorLines.map((line, i) => (
+              <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <span style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,153,0,0.15)', border: '1px solid rgba(255,153,0,0.3)', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700, color: '#ff9900', lineHeight: 1 }}>
                   {i + 1}
                 </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Uzun metin — sunucu okur */}
-                  <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
-                    {idea.presenter_text || idea.text}
-                  </p>
-                  {/* Kısa overlay metni */}
-                  {idea.text && idea.presenter_text && idea.text !== idea.presenter_text && (
-                    <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#555', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
-                      <span style={{ color: '#444', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.65rem', marginRight: 6 }}>Overlay:</span>
-                      {idea.text}
-                    </p>
-                  )}
-                  {(idea.reason || idea.name) && (
-                    <div style={{ marginTop: 6, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {idea.reason && (
-                        <span style={{ fontSize: '0.72rem', padding: '2px 8px', background: color + '18', border: `1px solid ${color}44`, borderRadius: 4, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                          {idea.reason}
-                        </span>
-                      )}
-                      {idea.name && (
-                        <span style={{ fontSize: '0.72rem', color: '#666' }}>{idea.name}</span>
-                      )}
-                    </div>
-                  )}
-                  {aiComment && (
-                    <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#888', lineHeight: 1.5, fontFamily: 'var(--font-sora)', fontStyle: 'italic', borderLeft: `2px solid ${color}33`, paddingLeft: '0.6rem' }}>
-                      {aiComment}
-                    </p>
-                  )}
-                </div>
+                <p style={{ margin: 0, fontSize: '0.92rem', color: '#b0b0b0', lineHeight: 1.55, fontFamily: 'var(--font-sora)', fontStyle: 'italic' }}>
+                  {line}
+                </p>
               </div>
-            )
-          })}
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* TOP3 / POLL: tüm fikirler */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          {top3Ideas.map((idea, i) => (
+            <IdeaRow key={idea.id ?? i} idea={idea} index={i} color={color} />
+          ))}
         </div>
       )}
     </section>
@@ -301,8 +390,7 @@ function MessageCard({ item, index }) {
   )
 }
 
-function CountdownPanel({ decisionState }) {
-  const { remaining, pollActive } = usePollCountdown()
+function CountdownPanel({ decisionState, remaining, pollActive }) {
 
   if (decisionState !== 'poll') return null
 
@@ -358,6 +446,7 @@ function CountdownPanel({ decisionState }) {
 export default function PresenterPage() {
   const { messages, totalIdeas, participantCount, lastUpdated } = useLiveData()
   const decision = useDecisionState()
+  const { remaining, pollActive, pollIdeas } = usePollCountdown()
 
   const timeStr = lastUpdated
     ? lastUpdated.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -456,10 +545,10 @@ export default function PresenterPage() {
       </header>
 
       {/* Karar ekranı durumu */}
-      <DecisionPanel decision={decision} />
+      <DecisionPanel decision={decision} pollIdeas={pollIdeas} />
 
       {/* Oylama geri sayımı */}
-      <CountdownPanel decisionState={decision.state} />
+      <CountdownPanel decisionState={decision.state} remaining={remaining} pollActive={pollActive} />
 
       {/* Mesaj listesi */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
