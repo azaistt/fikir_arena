@@ -125,11 +125,19 @@ function DecisionPanel({ decision }) {
                   {i + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Uzun metin — sunucu okur */}
                   <p style={{ margin: 0, fontSize: '1rem', color: '#e8e8e8', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
                     {idea.presenter_text || idea.text}
                   </p>
+                  {/* Kısa overlay metni */}
+                  {idea.text && idea.presenter_text && idea.text !== idea.presenter_text && (
+                    <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#555', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+                      <span style={{ color: '#444', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.65rem', marginRight: 6 }}>Overlay:</span>
+                      {idea.text}
+                    </p>
+                  )}
                   {(idea.reason || idea.name) && (
-                    <div style={{ marginTop: 4, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ marginTop: 6, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       {idea.reason && (
                         <span style={{ fontSize: '0.72rem', padding: '2px 8px', background: color + '18', border: `1px solid ${color}44`, borderRadius: 4, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                           {idea.reason}
