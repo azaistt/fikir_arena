@@ -248,35 +248,44 @@ function DecisionPanel({ decision, pollIdeas }) {
         <p style={{ margin: 0, color: '#444', fontSize: '0.9rem' }}>Henüz fikir seçilmedi.</p>
       ) : isResult && winnerIdea ? (
         /* RESULT: sadece kazanan + moderatör scripti */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Kazanan fikir */}
-          <div style={{ background: 'rgba(255,30,30,0.06)', border: '1px solid rgba(255,30,30,0.25)', borderLeft: '4px solid #ff1e1e', borderRadius: '0 8px 8px 0', padding: '1rem 1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#ff1e1e' }}>
+          <div style={{ background: 'rgba(255,30,30,0.06)', border: '1px solid rgba(255,30,30,0.25)', borderLeft: '4px solid #ff1e1e', borderRadius: '0 8px 8px 0', padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#ff1e1e' }}>
                 🏆 KAZANAN FİKİR {winnerPercent > 0 ? `· %${Math.round(winnerPercent)} oy` : ''}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#f3f3f3', lineHeight: 1.4, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
-              {winnerIdea.presenter_text || winnerIdea.text}
-            </p>
+            {/* Kısa versiyon — başlık */}
+            {winnerIdea.text && (
+              <p style={{ margin: '0 0 0.6rem', fontSize: '1.3rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.3, fontFamily: 'var(--font-sora)', wordBreak: 'break-word' }}>
+                {winnerIdea.text}
+              </p>
+            )}
+            {/* Uzun versiyon — tam metin */}
+            {winnerIdea.presenter_text && winnerIdea.presenter_text !== winnerIdea.text && (
+              <p style={{ margin: 0, fontSize: '1.1rem', color: '#c0c0c0', lineHeight: 1.65, fontFamily: 'var(--font-sora)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                {winnerIdea.presenter_text}
+              </p>
+            )}
             {winnerIdea.name && (
-              <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#666', fontFamily: 'var(--font-sora)' }}>
+              <p style={{ margin: '0.75rem 0 0', fontSize: '0.9rem', color: '#666', fontFamily: 'var(--font-sora)' }}>
                 {winnerIdea.name} · {winnerIdea.source}
               </p>
             )}
           </div>
 
           {/* Moderatör konuşma kartı */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#555' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#666' }}>
               SUNUCU KONUŞMA NOKTALARI
             </span>
             {moderatorLines.map((line, i) => (
-              <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <span style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,153,0,0.15)', border: '1px solid rgba(255,153,0,0.3)', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700, color: '#ff9900', lineHeight: 1 }}>
+              <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <span style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,153,0,0.15)', border: '1px solid rgba(255,153,0,0.3)', borderRadius: 5, fontSize: '0.9rem', fontWeight: 700, color: '#ff9900', lineHeight: 1 }}>
                   {i + 1}
                 </span>
-                <p style={{ margin: 0, fontSize: '0.92rem', color: '#b0b0b0', lineHeight: 1.55, fontFamily: 'var(--font-sora)', fontStyle: 'italic' }}>
+                <p style={{ margin: 0, fontSize: '1.05rem', color: '#c8c8c8', lineHeight: 1.65, fontFamily: 'var(--font-sora)', fontStyle: 'italic' }}>
                   {line}
                 </p>
               </div>
