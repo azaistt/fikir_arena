@@ -64,6 +64,49 @@ function useDecisionState() {
   return decision
 }
 
+function formatTime(secs) {
+  const s = Math.max(0, secs)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+
+function usePollCountdown() {
+  const [serverSeconds, setServerSeconds] = useState(0)
+  const [pollActive, setPollActive] = useState(false)
+  const [remaining, setRemaining] = useState(0)
+
+  useEffect(() => {
+    const fetch_ = async () => {
+      try {
+        const res = await fetch(`${API}/poll`)
+        if (!res.ok) return
+        const data = await res.json()
+        setPollActive(Boolean(data.active))
+        if (typeof data.remaining_seconds === 'number') {
+          setServerSeconds(data.remaining_seconds)
+          setRemaining(data.remaining_seconds)
+        }
+      } catch {}
+    }
+    fetch_()
+    const t = setInterval(fetch_, 3000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    setRemaining(serverSeconds)
+  }, [serverSeconds])
+
+  useEffect(() => {
+    if (remaining <= 0) return
+    const t = setTimeout(() => setRemaining(r => Math.max(0, r - 1)), 1000)
+    return () => clearTimeout(t)
+  }, [remaining])
+
+  return { remaining, pollActive }
+}
+
 function buildAiComment(idea) {
   const { reason, scores } = idea
   if (!scores) return null
@@ -258,6 +301,60 @@ function MessageCard({ item, index }) {
   )
 }
 
+function CountdownPanel({ decisionState }) {
+  const { remaining, pollActive } = usePollCountdown()
+
+  if (decisionState !== 'poll') return null
+
+  const isDone = remaining <= 0 || !pollActive
+
+  return (
+    <section
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '2rem',
+        background: isDone ? 'rgba(255,255,255,0.03)' : 'rgba(255,153,0,0.06)',
+        border: `1px solid ${isDone ? 'rgba(255,255,255,0.08)' : 'rgba(255,153,0,0.3)'}`,
+        borderLeft: `4px solid ${isDone ? '#555' : '#ff9900'}`,
+        borderRadius: '0 12px 12px 0',
+        padding: '1.25rem 2rem',
+      }}
+    >
+      {/* Durum göstergesi */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {!isDone && (
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff9900', boxShadow: '0 0 8px #ff9900', animation: 'pulse 1s ease-in-out infinite' }} />
+          )}
+          <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: isDone ? '#555' : '#ff9900' }}>
+            {isDone ? 'OYLAMA BİTTİ' : 'OYLAMA DEVAM EDİYOR'}
+          </span>
+        </div>
+        <span style={{ fontSize: '0.7rem', color: '#444', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          Kalan Süre
+        </span>
+      </div>
+
+      {/* Büyük sayaç */}
+      <div
+        style={{
+          fontFamily: 'var(--font-rajdhani)',
+          fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+          fontWeight: 700,
+          lineHeight: 1,
+          color: isDone ? '#333' : remaining <= 10 ? '#ff1e1e' : '#f3f3f3',
+          textShadow: isDone ? 'none' : remaining <= 10 ? '0 0 20px rgba(255,30,30,0.6)' : 'none',
+          letterSpacing: '0.05em',
+          transition: 'color 0.3s',
+        }}
+      >
+        {formatTime(remaining)}
+      </div>
+    </section>
+  )
+}
+
 export default function PresenterPage() {
   const { messages, totalIdeas, participantCount, lastUpdated } = useLiveData()
   const decision = useDecisionState()
@@ -361,6 +458,9 @@ export default function PresenterPage() {
       {/* Karar ekranı durumu */}
       <DecisionPanel decision={decision} />
 
+      {/* Oylama geri sayımı */}
+      <CountdownPanel decisionState={decision.state} />
+
       {/* Mesaj listesi */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {messages.length === 0 ? (
@@ -399,6 +499,7 @@ export default function PresenterPage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
       `}</style>
     </div>
   )
