@@ -559,6 +559,33 @@ export default function PresenterPage() {
       {/* Oylama geri sayımı */}
       <CountdownPanel decisionState={decision.state} remaining={remaining} pollActive={pollActive} />
 
+      {/* Oy kanalı hatırlatma — sadece poll state'te */}
+      {decision.state === 'poll' && (
+        <section
+          style={{
+            background: 'rgba(255,153,0,0.05)',
+            border: '1px solid rgba(255,153,0,0.22)',
+            borderLeft: '4px solid #ff9900',
+            borderRadius: '0 12px 12px 0',
+            padding: '1rem 2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+          }}
+        >
+          <span style={{ fontFamily: 'var(--font-rajdhani)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#ff9900', flexShrink: 0 }}>
+            OY KANALLARI
+          </span>
+          <p style={{ margin: 0, fontSize: '1rem', color: '#c8c8c8', fontFamily: 'var(--font-sora)', lineHeight: 1.4 }}>
+            YouTube · QR · Web'den{' '}
+            <strong style={{ color: '#fff' }}>1 · 2 · 3</strong>
+            {' '}veya{' '}
+            <strong style={{ color: '#fff' }}>Fikir 1 · Fikir 2 · Fikir 3</strong>
+            {' '}yazarak oy ver
+          </p>
+        </section>
+      )}
+
       {/* Mesaj listesi */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {messages.length === 0 ? (
